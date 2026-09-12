@@ -2,8 +2,8 @@ import 'dart:io';
 
 import 'package:flutter_pos_printer_platform_image_3/flutter_pos_printer_platform_image_3.dart';
 
-/// ⚠️ Fork solo-USB (2026-09-11): `bluetooth` se ha retirado de este enum. El
-/// soporte Bluetooth completo se elimino del plugin -- ver la cabecera de
+/// USB-only fork (2026-09-11): `bluetooth` has been dropped from this enum.
+/// Bluetooth support was removed from the plugin entirely -- see the header of
 /// FlutterPosPrinterPlatformPlugin.kt.
 enum PrinterType { usb, network }
 

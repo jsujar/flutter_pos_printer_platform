@@ -82,17 +82,17 @@ class UsbPrinterConnector implements PrinterConnector<UsbPrinterInput> {
   setProduct(String productId) => this.productId = productId;
   setName(String name) => this.name = name;
 
-  /// 🖨 Pregunta a la impresora su estado con `DLE EOT 1..4`.
+  /// Asks the printer for its state with `DLE EOT 1..4`.
   ///
-  /// Devuelve cuatro enteros (uno por consulta): estado general, estado offline
-  /// --que incluye la tapa abierta--, estado de error y sensor de papel. Un -1
-  /// significa que la impresora no contestó a esa consulta.
+  /// Returns four integers, one per query: printer status, offline status
+  /// (which covers the cover being open), error status and paper sensor. A -1
+  /// means the printer did not answer that query.
   ///
-  /// ⚠️ Que devuelva cuatro -1 no es un fallo del código: hay impresoras que
-  /// exponen el canal de entrada por cumplir la especificación USB y luego no
-  /// implementan el comando. Compruébalo antes de construir nada encima.
+  /// Four -1 values are not a bug in this code: some printers expose the IN
+  /// endpoint to satisfy the USB spec and then never implement the command.
+  /// Check that before building anything on top of it.
   ///
-  /// Añadido en este fork (2026-09-11); no existe en el plugin original.
+  /// Added in this fork (2026-09-11); not present upstream.
   Future<List<int>> readStatus() async {
     try {
       final List<dynamic> raw =

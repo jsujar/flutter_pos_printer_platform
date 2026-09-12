@@ -2,12 +2,13 @@
   package="com.sersoluciones.flutter_pos_printer_platform">
 
     <!--
-      ⚠️ Fork solo-USB (2026-09-11). Aqui habia siete permisos que la app anfitriona
-      heredaba sin declararlos: BLUETOOTH, BLUETOOTH_ADMIN, BLUETOOTH_SCAN,
-      BLUETOOTH_ADVERTISE, BLUETOOTH_CONNECT, ACCESS_FINE_LOCATION y
-      ACCESS_COARSE_LOCATION, mas un uses-feature de bluetooth.
+      USB-only fork (2026-09-11). Seven permissions used to live here, and every
+      host app inherited them without declaring them: BLUETOOTH, BLUETOOTH_ADMIN,
+      BLUETOOTH_SCAN, BLUETOOTH_ADVERTISE, BLUETOOTH_CONNECT,
+      ACCESS_FINE_LOCATION and ACCESS_COARSE_LOCATION, plus a bluetooth
+      uses-feature.
 
-      Ninguno hacia falta para imprimir por USB. El permiso del dispositivo USB lo
-      concede el usuario en el dialogo del sistema, y no se declara aqui.
+      None of them is needed to print over USB. Permission for the USB device is
+      granted by the user through the system dialog and is not declared here.
     -->
 </manifest>

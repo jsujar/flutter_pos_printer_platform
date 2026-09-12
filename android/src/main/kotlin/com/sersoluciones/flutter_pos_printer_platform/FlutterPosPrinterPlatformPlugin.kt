@@ -20,26 +20,26 @@ import io.flutter.plugin.common.MethodChannel.MethodCallHandler
 import io.flutter.plugin.common.MethodChannel.Result
 
 /**
- * FlutterPosPrinterPlatformPlugin -- variante SOLO USB.
+ * FlutterPosPrinterPlatformPlugin -- USB-ONLY variant.
  *
- * ⚠️ Este fork ha eliminado por completo el soporte Bluetooth/BLE (2026-09-11).
- * Motivos, por orden de importancia:
+ * This fork removes Bluetooth/BLE support entirely (2026-09-11). Reasons, in
+ * order of weight:
  *
- * 1. La app que lo usa imprime unicamente por USB: no habia una sola llamada a la
- *    parte Bluetooth.
- * 2. El plugin original arrastraba siete permisos que la app heredaba sin
- *    declararlos, incluidos ACCESS_FINE_LOCATION y ACCESS_COARSE_LOCATION. Una
- *    tablet de punto de venta pidiendo ubicacion precisa por un plugin de
- *    impresora es injustificable.
- * 3. El campo `bluetoothService` era `lateinit` y se asignaba en
- *    onAttachedToActivity() DESPUES de `adapter.init()`. Cuando ese init fallaba
- *    --y fallaba siempre en Android 14+, ver USBPrinterService.init()-- el campo
- *    se quedaba sin asignar y la app crasheaba al cerrarse con
- *    UninitializedPropertyAccessException. Sin ese campo, la clase entera de
- *    fallo desaparece.
+ * 1. The app using it prints over USB and nothing else: there was not a single
+ *    call into the Bluetooth side.
+ * 2. The upstream plugin dragged in seven permissions that every host app
+ *    inherited without declaring them, ACCESS_FINE_LOCATION and
+ *    ACCESS_COARSE_LOCATION among them. A point-of-sale tablet asking for
+ *    precise location because of a printer plugin is indefensible.
+ * 3. The `bluetoothService` field was `lateinit` and assigned in
+ *    onAttachedToActivity() AFTER `adapter.init()`. When that init threw -- and
+ *    it always did on Android 14+, see USBPrinterService.init() -- the field
+ *    stayed unassigned and the app crashed on teardown with
+ *    UninitializedPropertyAccessException. Without the field, that whole class
+ *    of failure disappears.
  *
- * Si algun dia hace falta Bluetooth, se recupera del historial de git, no se
- * reescribe.
+ * If Bluetooth is ever needed again, recover it from git history rather than
+ * rewriting it.
  */
 class FlutterPosPrinterPlatformPlugin : FlutterPlugin, MethodCallHandler, ActivityAware {
 
