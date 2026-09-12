@@ -82,7 +82,28 @@ class UsbPrinterConnector implements PrinterConnector<UsbPrinterInput> {
   setProduct(String productId) => this.productId = productId;
   setName(String name) => this.name = name;
 
-  /// Gets the current state of the Bluetooth module
+  /// Asks the printer for its state with `DLE EOT 1..4`.
+  ///
+  /// Returns four integers, one per query: printer status, offline status
+  /// (which covers the cover being open), error status and paper sensor. A -1
+  /// means the printer did not answer that query.
+  ///
+  /// Four -1 values are not a bug in this code: some printers expose the IN
+  /// endpoint to satisfy the USB spec and then never implement the command.
+  /// Check that before building anything on top of it.
+  ///
+  /// Added in this fork (2026-09-11); not present upstream.
+  Future<List<int>> readStatus() async {
+    try {
+      final List<dynamic> raw =
+          await flutterPrinterChannel.invokeMethod('readPrinterStatus');
+      return raw.map((e) => e is int ? e : -1).toList();
+    } catch (e) {
+      return const [-1, -1, -1, -1];
+    }
+  }
+
+  /// Gets the current state of the USB connection
   Stream<USBStatus> get currentStatus async* {
     if (Platform.isAndroid) {
       yield* _statusStream.cast<USBStatus>();

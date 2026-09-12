@@ -1,25 +1,14 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
   package="com.sersoluciones.flutter_pos_printer_platform">
 
-    <uses-feature
-        android:name="android.hardware.bluetooth"
-        android:required="false" />
+    <!--
+      USB-only fork (2026-09-11). Seven permissions used to live here, and every
+      host app inherited them without declaring them: BLUETOOTH, BLUETOOTH_ADMIN,
+      BLUETOOTH_SCAN, BLUETOOTH_ADVERTISE, BLUETOOTH_CONNECT,
+      ACCESS_FINE_LOCATION and ACCESS_COARSE_LOCATION, plus a bluetooth
+      uses-feature.
 
-    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
-    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
-    <!--BLUETOOTH PERMISSION-->
-    <!-- Request legacy Bluetooth permissions on older devices. -->
-    <uses-permission android:name="android.permission.BLUETOOTH" />
-    <uses-permission android:name="android.permission.BLUETOOTH_ADMIN" />
-    <!-- Needed only if your app looks for Bluetooth devices.
-             If your app doesn't use Bluetooth scan results to derive physical
-             location information, you can strongly assert that your app
-             doesn't derive physical location. -->
-    <uses-permission android:name="android.permission.BLUETOOTH_SCAN" />
-    <!-- Needed only if your app makes the device discoverable to Bluetooth
-      devices. -->
-    <uses-permission android:name="android.permission.BLUETOOTH_ADVERTISE" />
-    <!-- Needed only if your app communicates with already-paired Bluetooth
-           devices. -->
-    <uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />
+      None of them is needed to print over USB. Permission for the USB device is
+      granted by the user through the system dialog and is not declared here.
+    -->
 </manifest>

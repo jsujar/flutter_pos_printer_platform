@@ -1,0 +1,2 @@
+/Users/sujar/Documents/Heladeria/Proyectos/MarconataApp/flutter_pos_printer_platform/example/android/app/.cxx/Debug/2y6f562x/x86/CMakeFiles/edit_cache.dir
+/Users/sujar/Documents/Heladeria/Proyectos/MarconataApp/flutter_pos_printer_platform/example/android/app/.cxx/Debug/2y6f562x/x86/CMakeFiles/rebuild_cache.dir

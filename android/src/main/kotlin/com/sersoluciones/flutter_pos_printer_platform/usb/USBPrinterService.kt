@@ -23,6 +23,11 @@ class USBPrinterService private constructor(private var mHandler: Handler?) {
     private var mUsbDeviceConnection: UsbDeviceConnection? = null
     private var mUsbInterface: UsbInterface? = null
     private var mEndPoint: UsbEndpoint? = null
+
+    /// Bulk IN endpoint. The original plugin ignored it and only picked the
+    /// OUT one, so the printer had no way of telling us anything. Needed to
+    /// ask it for its state (paper, cover, errors).
+    private var mEndPointIn: UsbEndpoint? = null
     var state: Int = STATE_USB_NONE
 
     fun setHandler(handler: Handler?) {
@@ -70,14 +75,33 @@ class USBPrinterService private constructor(private var mHandler: Handler?) {
     fun init(reactContext: Context?) {
         mContext = reactContext
         mUSBManager = mContext!!.getSystemService(Context.USB_SERVICE) as UsbManager
+        // Android 14+ (API 34) forbids a PendingIntent that is both FLAG_MUTABLE
+        // and wraps an implicit Intent. FLAG_IMMUTABLE is NOT the fix: the USB
+        // permission flow needs the system to fill EXTRA_DEVICE and
+        // EXTRA_PERMISSION_GRANTED into the reply intent, and an immutable one
+        // never receives them -- the receiver below would read
+        // getBooleanExtra(EXTRA_PERMISSION_GRANTED, false) and permission would
+        // look denied every time. Keep FLAG_MUTABLE and make the Intent explicit
+        // with setPackage() instead.
+        val permissionIntent = Intent(ACTION_USB_PERMISSION).apply {
+            setPackage(mContext!!.packageName)
+        }
         mPermissionIndent = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S) {
-            PendingIntent.getBroadcast(mContext, 0, Intent(ACTION_USB_PERMISSION), PendingIntent.FLAG_IMMUTABLE)
+            PendingIntent.getBroadcast(mContext, 0, permissionIntent, PendingIntent.FLAG_MUTABLE)
         } else {
-            PendingIntent.getBroadcast(mContext, 0, Intent(ACTION_USB_PERMISSION), 0)
+            PendingIntent.getBroadcast(mContext, 0, permissionIntent, 0)
         }
         val filter = IntentFilter(ACTION_USB_PERMISSION)
         filter.addAction(UsbManager.ACTION_USB_DEVICE_DETACHED)
-        mContext!!.registerReceiver(mUsbDeviceReceiver, filter)
+        // Desde API 33 hay que declarar si el receptor esta exportado cuando el filtro
+        // incluye una accion propia (ACTION_USB_PERMISSION lo es). NOT_EXPORTED es lo
+        // correcto: nadie mas debe poder disparar esto, y los broadcasts del sistema
+        // (ACTION_USB_DEVICE_DETACHED) siguen llegando igual.
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
+            mContext!!.registerReceiver(mUsbDeviceReceiver, filter, Context.RECEIVER_NOT_EXPORTED)
+        } else {
+            mContext!!.registerReceiver(mUsbDeviceReceiver, filter)
+        }
         Log.v(LOG_TAG, "ESC/POS Printer initialized")
     }
 
@@ -140,6 +164,19 @@ class USBPrinterService private constructor(private var mHandler: Handler?) {
             return true
         }
         val usbInterface = mUsbDevice!!.getInterface(0)
+
+        // Walk the whole interface first to pick up the IN endpoint, if there
+        // is one. Not every printer exposes it.
+        mEndPointIn = null
+        for (i in 0 until usbInterface.endpointCount) {
+            val ep = usbInterface.getEndpoint(i)
+            if (ep.type == UsbConstants.USB_ENDPOINT_XFER_BULK &&
+                ep.direction == UsbConstants.USB_DIR_IN
+            ) {
+                mEndPointIn = ep
+            }
+        }
+
         for (i in 0 until usbInterface.endpointCount) {
             val ep = usbInterface.getEndpoint(i)
             if (ep.type == UsbConstants.USB_ENDPOINT_XFER_BULK) {
@@ -164,6 +201,55 @@ class USBPrinterService private constructor(private var mHandler: Handler?) {
             }
         }
         return true
+    }
+
+    /**
+     * Asks the printer for its state with the ESC/POS real-time command
+     * `DLE EOT n` (0x10 0x04 n) and returns the byte it answers for each n.
+     *
+     * n = 1 printer status | 2 offline status (includes COVER OPEN)
+     * n = 3 error status   | 4 paper sensor
+     *
+     * Returns four integers, with -1 wherever the printer did not answer. A
+     * mute printer -- and plenty of cheap ones are -- returns four -1 even
+     * when it does expose an IN endpoint.
+     *
+     * Not present in the upstream plugin; added in this fork (2026-09-11).
+     * Without it there is no way to tell whether the printer ran out of paper
+     * or its cover is open, and a kitchen ticket that never comes out is an
+     * order nobody prepares.
+     */
+    fun readStatus(): List<Int> {
+        val results = mutableListOf<Int>()
+
+        if (!openConnection() || mEndPointIn == null) {
+            Log.w(LOG_TAG, "No IN endpoint: this printer cannot answer")
+            return listOf(-1, -1, -1, -1)
+        }
+
+        synchronized(printLock) {
+            for (n in 1..4) {
+                val command = byteArrayOf(0x10, 0x04, n.toByte())
+                val written = mUsbDeviceConnection!!.bulkTransfer(
+                    mEndPoint, command, command.size, STATUS_TIMEOUT_MS
+                )
+
+                if (written < 0) {
+                    results.add(-1)
+                    continue
+                }
+
+                val buffer = ByteArray(8)
+                val read = mUsbDeviceConnection!!.bulkTransfer(
+                    mEndPointIn, buffer, buffer.size, STATUS_TIMEOUT_MS
+                )
+
+                results.add(if (read > 0) buffer[0].toInt() and 0xFF else -1)
+            }
+        }
+
+        Log.i(LOG_TAG, "Printer status (DLE EOT 1..4): $results")
+        return results
     }
 
     fun printText(text: String): Boolean {
@@ -250,6 +336,11 @@ class USBPrinterService private constructor(private var mHandler: Handler?) {
     }
 
     companion object {
+        /// Deliberately short: a printer that does not answer straight away is
+        /// not going to answer at all, and the thread must not block waiting on
+        /// a mute one.
+        private const val STATUS_TIMEOUT_MS = 500
+
         @SuppressLint("StaticFieldLeak")
         private var mInstance: USBPrinterService? = null
         private const val LOG_TAG = "ESC POS Printer"

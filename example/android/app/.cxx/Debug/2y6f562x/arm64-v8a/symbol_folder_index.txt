@@ -1,0 +1,1 @@
+/Users/sujar/Documents/Heladeria/Proyectos/MarconataApp/flutter_pos_printer_platform/example/build/app/intermediates/cxx/Debug/2y6f562x/obj/arm64-v8a
