@@ -1,25 +1,36 @@
-// This is a basic Flutter widget test.
-//
-// To perform an interaction with a widget in your test, use the WidgetTester
-// utility that Flutter provides. For example, you can send tap and scroll
-// gestures. You can also use WidgetTester to find child widgets in the widget
-// tree, read text, and verify that the values of widget properties are correct.
-
 import 'package:flutter/material.dart';
-import 'package:flutter_pos_printer_example/main.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-void main() {
-  testWidgets('Verify Platform version', (WidgetTester tester) async {
-    // Build our app and trigger a frame.
-    await tester.pumpWidget(const MyApp());
+import 'package:flutter_pos_printer_example/main.dart';
 
-    // Verify that platform version is retrieved.
-    expect(
-      find.byWidgetPredicate(
-        (Widget widget) => widget is Text && widget.data!.startsWith('Running on:'),
-      ),
-      findsOneWidget,
-    );
+void main() {
+  testWidgets('opens on the USB tab with nothing connected', (tester) async {
+    await tester.pumpWidget(const ExampleApp());
+
+    expect(find.text('POS printer — USB-only fork'), findsOneWidget);
+    expect(find.text('USB status: none'), findsOneWidget);
+    expect(find.text('No devices yet.'), findsOneWidget);
+  });
+
+  testWidgets('offers USB and network, and nothing else', (tester) async {
+    await tester.pumpWidget(const ExampleApp());
+
+    // This fork has no Bluetooth: if a third transport ever shows up here,
+    // either the enum grew or something was reintroduced by mistake.
+    expect(find.widgetWithText(ButtonSegment, 'USB'), findsNothing);
+    expect(find.text('USB'), findsOneWidget);
+    expect(find.text('Network'), findsOneWidget);
+    expect(find.textContaining('Bluetooth'), findsNothing);
+  });
+
+  testWidgets('switching to network asks for an IP instead of scanning',
+      (tester) async {
+    await tester.pumpWidget(const ExampleApp());
+
+    await tester.tap(find.text('Network'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Printer IP address'), findsOneWidget);
+    expect(find.text('Find printers'), findsNothing);
   });
 }
