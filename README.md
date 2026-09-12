@@ -1,7 +1,7 @@
 # flutter_pos_printer_platform — USB-only fork
 
 > **This is a fork.** It is not a drop-in replacement for the upstream package:
-> **Bluetooth and BLE support has been removed entirely.** Anything that imports
+> **Bluetooth and BLE support is gone from the public API.** Anything that imports
 > `PrinterType.bluetooth`, `BluetoothPrinterInput` or the Bluetooth connectors will
 > not compile against it.
 
@@ -61,6 +61,12 @@ get. Remove the field and the failure mode cannot happen.
 single call into the Bluetooth side, while the code kept a BLE scanner and a bonded-device
 receiver alive in the background.
 
+**Scope, stated precisely:** the Dart API and the Android native side have no Bluetooth
+left. The **iOS native sources still contain the BLE classes** (`BLEConnecter` and friends)
+— they are unreachable, because nothing in Dart calls into them any more, but they are
+still compiled in. Removing them was out of scope: this fork was driven by an Android bug
+and the iOS path is untested here. Say so rather than claim a clean sweep.
+
 If Bluetooth is ever needed again, recover it from git history rather than rewriting it.
 
 ### 3. Adds printer status reading over USB
@@ -105,175 +111,118 @@ a build next month give the same thing.
 
 --------------------------
 
-## Upstream documentation
+## Usage
 
-A library to discover printers, and send printer commands.
+A library to discover printers and send them ESC/POS commands, over **USB and
+network (ethernet/wifi)**.
 
-This library allows to print esc commands to printers in different platforms such as android, ios, windows and different interfaces as USB and Wifi/Ethernet.
+Generate the bytes with
+[flutter_esc_pos_utils](https://pub.dev/packages/flutter_esc_pos_utils) and hand them to
+this package.
 
-> ⚠️ Upstream text below may still mention Bluetooth. **This fork does not support it** — see "What this fork changes" above.
+> ⚠️ **`/example` is upstream's and has not been updated for this fork.** It is built
+> around Bluetooth — `PrinterType.bluetooth`, `stateBluetooth`, a `BluetoothPrinter` model
+> — so it **will not compile** here. The snippets below are the current API; use those.
 
-Inspired by [flutter_pos_printer](https://github.com/feedmepos/flutter_printer/tree/master/packages/flutter_pos_printer).
+### What is supported
 
+Only Android was touched and verified in this fork. The other columns are upstream's
+claims, left as they were.
 
-## Main Features
-* Android, iOS and Windows support
-* Scan for bluetooth devices
-* Send raw `List<int> bytes` data to a device, review this library to generate ESC/POS commands [flutter_esc_pos_utils](https://pub.dev/packages/flutter_esc_pos_utils).
+|                     | Android | iOS | Windows | Description |
+| :------------------ | :-----: | :-: | :-----: | :---------- |
+| USB interface       | ✅ | ⬜ | ✅ | Connect to USB devices. |
+| Net (ethernet/wifi) | ✅ | ✅ | ✅ | Connect to network devices. |
+| `discovery`         | ✅ | ✅ | ✅ | List USB devices, or scan the network. |
+| `connect`           | ✅ | ✅ | ✅ | Open a connection to the device. |
+| `disconnect`        | ✅ | ✅ | ✅ | Close an active or pending connection. |
+| `send`              | ✅ | ✅ | ✅ | Send raw `List<int>` bytes. |
+| `stateUSB`          | ✅ | ⬜ | ⬜ | Stream of USB connection state changes. |
+| `readStatus`        | ✅ | ⬜ | ⬜ | Ask the printer for its state — **added by this fork**. |
 
-## Features
+**Removed in this fork:** the Bluetooth classic and BLE interfaces, `PrinterType.bluetooth`,
+`BluetoothPrinterInput`, the `isBle` and `autoConnect` parameters and the `stateBluetooth`
+stream. See "What this fork changes" above for why.
 
-|                         |      Android       |         iOS          |      Windows       |            Description            |
-| :---------------        | :----------------: | :------------------: | :----------------: | :-------------------------------- |
-| USB interface           | :white_check_mark: |  :white_square_button: | :white_check_mark: | Allows connection with usb devices. |
-| Bluetooth classic interface | :white_check_mark: |  :white_square_button:  | :white_square_button: | Allows connection with classic bt devices. |
-| Bluetooth low energy (BLE) interface | :white_check_mark: |  :white_check_mark:  | :white_square_button: | Allows connection with bt BLE devices. |
-| Net (ethernet/wifi) interface | :white_check_mark: |  :white_check_mark:  | :white_check_mark: | Allows connection with network devices. |
-| scan                    | :white_check_mark: |  :white_check_mark:  | :white_check_mark: | Starts a scan for only Bluetooth devices or network devices(Android/iOS). |
-| connect                 | :white_check_mark: |  :white_check_mark:  | :white_check_mark: | Establishes a connection to the device. |
-| disconnect              | :white_check_mark: |  :white_check_mark:  | :white_check_mark: | Cancels an active or pending connection to the device. |
-| state                   | :white_check_mark: |  :white_check_mark:  | :white_check_mark: | Stream of state changes for the Bluetooth Device. |
-| print                   | :white_check_mark: |  :white_check_mark:  | :white_check_mark: | print bytes. |
+### Minimum Android SDK
 
-## Getting Started
+Version 21, as upstream. In `android/app/build.gradle`:
 
-For a full example please check /example folder. Here are only the most important parts of the code to illustrate how to use the library.
-
-Generate bytes to print through [flutter_esc_pos_utils](https://pub.dev/packages/flutter_esc_pos_utils).
-
-```dart
-    import 'package:esc_pos_utils/esc_pos_utils.dart';
-
-    final profile = await CapabilityProfile.load();
-    final generator = Generator(PaperSize.mm58, profile);
-    List<int> bytes = [];
-
-    bytes += generator.text('Test Print', styles: const PosStyles(align: PosAlign.center));
-    bytes += generator.text('Product 1');
-    bytes += generator.text('Product 2');
-```
-
-## Android
-Allow to connect bluetooth (classic and BLE), USB and network devices
-
-### Change the minSdkVersion for Android
-
-flutter_pos_printer_platform is compatible only from version 21 of Android SDK so you should change this in android/app/build.gradle:
-
-In build.gradle set
 ```
     defaultConfig {
         ...
         minSdkVersion 21
-        targetSdkVersion 31
         ...
 ```
 
-select type of device `PrinterType` ( bluetooth, usb, network)
-
-if select bluetooth you can send optional params
-
-- isBle -> allow to connect with bluetooth that supports this technology
-- autoconnect -> allow to reconnect when state of device is None
-
-## iOS
-Allow to connect bluetooth (BLE) and network devices
-
-## Windows
-Allow to connect USB and network devices
-To network devices is necessary to set ipAddress
-
-
-## How to use it
-### init a PrinterManager instance
+### Generate the bytes
 
 ```dart
-import 'package:flutter_pos_printer_platform/flutter_pos_printer_platform.dart';
+import 'package:esc_pos_utils/esc_pos_utils.dart';
 
-    var printerManager = PrinterManager.instance;
+final profile = await CapabilityProfile.load();
+final generator = Generator(PaperSize.mm58, profile);
+List<int> bytes = [];
 
- ```
+bytes += generator.text('Test Print', styles: const PosStyles(align: PosAlign.center));
+bytes += generator.text('Product 1');
+```
 
-### scan
+### Discover, connect, print
+
+`PrinterType` has two values: `usb` and `network`.
 
 ```dart
-    var devices = [];
-    _scan(PrinterType type, {bool isBle = false}) {
-        // Find printers
-        PrinterManager.instance.discovery(type: type, isBle: isBle).listen((device) {
-            devices.add(device);
-        });
-    }
+import 'package:flutter_pos_printer_platform_image_3/flutter_pos_printer_platform_image_3.dart';
+
+final printerManager = PrinterManager.instance;
+
+// Discover
+final devices = <PrinterDevice>[];
+printerManager.discovery(type: PrinterType.usb).listen(devices.add);
+
+// Connect
+await printerManager.connect(
+  type: PrinterType.usb,
+  model: UsbPrinterInput(
+    name: selected.name,
+    productId: selected.productId,
+    vendorId: selected.vendorId,
+  ),
+);
+
+// Or over the network
+await printerManager.connect(
+  type: PrinterType.network,
+  model: TcpPrinterInput(ipAddress: '192.168.1.50'),
+);
+
+// Print
+await printerManager.send(type: PrinterType.usb, bytes: bytes);
+
+// Disconnect
+await printerManager.disconnect(type: PrinterType.usb);
 ```
 
-### connect
+### Watch the USB connection state
 
 ```dart
-_connectDevice(PrinterDevice selectedPrinter, PrinterType type, {bool reconnect = false, bool isBle = false, String? ipAddress = null}) async {
-    switch (type) {
-      // only windows and android
-      case PrinterType.usb:
-        await PrinterManager.instance.connect(
-            type: type,
-            model: UsbPrinterInput(name: selectedPrinter.name, productId: selectedPrinter.productId, vendorId: selectedPrinter.vendorId));
-        break;
-      // only iOS and android
-      case PrinterType.bluetooth:
-        await PrinterManager.instance.connect(
-            type: type,
-            model: BluetoothPrinterInput(
-                name: selectedPrinter.name,
-                address: selectedPrinter.address!,
-                isBle: isBle,
-                autoConnect: reconnect));
-        break;
-      case PrinterType.network:
-        await PrinterManager.instance.connect(type: type, model: TcpPrinterInput(ipAddress: ipAddress ?? selectedPrinter.address!));
-        break;
-      default:
-    }
-  }
+PrinterManager.instance.stateUSB.listen((status) {
+  // USBStatus.connected, .none, ...
+});
 ```
-### disconnect
+
+### Read the printer status (this fork only)
 
 ```dart
-    _disconnectDevice(PrinterType type) async {
-        await PrinterManager.instance.disconnect(type: type);
-        }
+final status = await UsbPrinterConnector.instance.readStatus();
+// [printer, offline (cover open), error, paper sensor]
+// -1 means the printer did not answer that query.
 ```
 
-### listen bluetooth state
-```dart
-    PrinterManager.instance.stateBluetooth.listen((status) {
-      log(' ----------------- status bt $status ------------------ ');
-    });
-```
-
-### send bytes to print
-```dart
-    _sendBytesToPrint(List<int> bytes, PrinterType type) async { 
-      PrinterManager.instance.send(type: type, bytes: bytes);
-    }
-
-```
-
-## Troubleshooting
-
-error:'State restoration of CBCentralManager is only allowed for applications that have specified the "bluetooth-central" background mode'
-info.plist add:
-
-```
-<key>NSBluetoothAlwaysUsageDescription</key>
-<string>Allow App use bluetooth?</string>
-<key>NSBluetoothPeripheralUsageDescription</key>
-<string>Allow App use bluetooth?</string>
-<key>UIBackgroundModes</key>
-<array>
-    <string>bluetooth-central</string>
-    <string>bluetooth-peripheral</string>
-</array>
-```
-
+⚠️ Read the caveats in "Adds printer status reading over USB" above before relying on it.
+A printer that answers nothing is not a bug in this code, and a successful write tells you
+nothing about whether paper actually came out.
 
 ## Credits
 - https://github.com/andrey-ushakov/esc_pos_utils
