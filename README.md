@@ -120,9 +120,9 @@ Generate the bytes with
 [flutter_esc_pos_utils](https://pub.dev/packages/flutter_esc_pos_utils) and hand them to
 this package.
 
-> ⚠️ **`/example` is upstream's and has not been updated for this fork.** It is built
-> around Bluetooth — `PrinterType.bluetooth`, `stateBluetooth`, a `BluetoothPrinter` model
-> — so it **will not compile** here. The snippets below are the current API; use those.
+[`/example`](example/) is a working app for this fork — discovery, connect, print and
+status reading on one screen — and it builds. The snippets below are the same API in
+short form.
 
 ### What is supported
 

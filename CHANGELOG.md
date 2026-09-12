@@ -12,7 +12,11 @@ Not published to pub.dev. Consume it from git; see the README.
   `isBle` / `autoConnect` parameters and the `stateBluetooth` stream. Also drops the seven
   permissions the plugin declared, two of them location permissions. The iOS native BLE
   sources are still present but unreachable.
-* `/example` has not been updated and no longer compiles.
+* **Rewrote `/example`** around USB and network. The upstream Bluetooth example was
+  deleted rather than kept as dead weight: it could never compile against this fork, and
+  it stays in git history for anyone who needs it. Its Android scaffolding was also
+  repaired -- Gradle 7.4 cannot run under the JDK 21 that current Flutter ships, and the
+  imperative Gradle plugin loader is no longer supported.
 
 ## 1.2.4
 

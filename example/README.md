@@ -37,5 +37,6 @@ plus the `namespace` that AGP 8 requires.
 
 ## The old example
 
-[`legacy_bluetooth/`](legacy_bluetooth/) keeps upstream's pre-fork example for reference.
-**It does not compile** — it is built on the Bluetooth API this fork removed.
+Upstream's pre-fork example was built on the Bluetooth API this fork removed, so it could
+never compile here and has been deleted. If you ever need to see how that API was wired
+up, it is in git history.
