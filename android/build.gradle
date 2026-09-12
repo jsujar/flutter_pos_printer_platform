@@ -25,7 +25,11 @@ apply plugin: 'com.android.library'
 apply plugin: 'kotlin-android'
 
 android {
-    compileSdkVersion 31
+    // Subido de 31 a 34: el codigo necesita referenciar Build.VERSION_CODES.TIRAMISU
+    // y Context.RECEIVER_NOT_EXPORTED, constantes que no existen compilando contra 31.
+    // `targetSdkVersion` se deja como estaba: en una libreria no gobierna el
+    // comportamiento en tiempo de ejecucion, lo hace el targetSdk de la app.
+    compileSdkVersion 34
 
     namespace 'com.sersoluciones.flutter_pos_printer_platform'
 

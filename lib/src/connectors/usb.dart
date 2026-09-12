@@ -82,7 +82,28 @@ class UsbPrinterConnector implements PrinterConnector<UsbPrinterInput> {
   setProduct(String productId) => this.productId = productId;
   setName(String name) => this.name = name;
 
-  /// Gets the current state of the Bluetooth module
+  /// 🖨 Pregunta a la impresora su estado con `DLE EOT 1..4`.
+  ///
+  /// Devuelve cuatro enteros (uno por consulta): estado general, estado offline
+  /// --que incluye la tapa abierta--, estado de error y sensor de papel. Un -1
+  /// significa que la impresora no contestó a esa consulta.
+  ///
+  /// ⚠️ Que devuelva cuatro -1 no es un fallo del código: hay impresoras que
+  /// exponen el canal de entrada por cumplir la especificación USB y luego no
+  /// implementan el comando. Compruébalo antes de construir nada encima.
+  ///
+  /// Añadido en este fork (2026-09-11); no existe en el plugin original.
+  Future<List<int>> readStatus() async {
+    try {
+      final List<dynamic> raw =
+          await flutterPrinterChannel.invokeMethod('readPrinterStatus');
+      return raw.map((e) => e is int ? e : -1).toList();
+    } catch (e) {
+      return const [-1, -1, -1, -1];
+    }
+  }
+
+  /// Gets the current state of the USB connection
   Stream<USBStatus> get currentStatus async* {
     if (Platform.isAndroid) {
       yield* _statusStream.cast<USBStatus>();
