@@ -15,7 +15,6 @@ Future<List<PrinterDiscovered>> discoverPrinters(
     {List<DiscoverResult Function()> modes = const [
       // discoverStarPrinter,
       UsbPrinterConnector.discoverPrinters,
-      BluetoothPrinterConnector.discoverPrinters,
       TcpPrinterConnector.discoverPrinters
     ]}) async {
   List<PrinterDiscovered> result = [];

@@ -1,25 +1,13 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
   package="com.sersoluciones.flutter_pos_printer_platform">
 
-    <uses-feature
-        android:name="android.hardware.bluetooth"
-        android:required="false" />
+    <!--
+      ⚠️ Fork solo-USB (2026-09-11). Aqui habia siete permisos que la app anfitriona
+      heredaba sin declararlos: BLUETOOTH, BLUETOOTH_ADMIN, BLUETOOTH_SCAN,
+      BLUETOOTH_ADVERTISE, BLUETOOTH_CONNECT, ACCESS_FINE_LOCATION y
+      ACCESS_COARSE_LOCATION, mas un uses-feature de bluetooth.
 
-    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
-    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
-    <!--BLUETOOTH PERMISSION-->
-    <!-- Request legacy Bluetooth permissions on older devices. -->
-    <uses-permission android:name="android.permission.BLUETOOTH" />
-    <uses-permission android:name="android.permission.BLUETOOTH_ADMIN" />
-    <!-- Needed only if your app looks for Bluetooth devices.
-             If your app doesn't use Bluetooth scan results to derive physical
-             location information, you can strongly assert that your app
-             doesn't derive physical location. -->
-    <uses-permission android:name="android.permission.BLUETOOTH_SCAN" />
-    <!-- Needed only if your app makes the device discoverable to Bluetooth
-      devices. -->
-    <uses-permission android:name="android.permission.BLUETOOTH_ADVERTISE" />
-    <!-- Needed only if your app communicates with already-paired Bluetooth
-           devices. -->
-    <uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />
+      Ninguno hacia falta para imprimir por USB. El permiso del dispositivo USB lo
+      concede el usuario en el dialogo del sistema, y no se declara aqui.
+    -->
 </manifest>

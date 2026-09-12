@@ -6,7 +6,6 @@ final flutterPrinterEventChannelUSB = const EventChannel('com.sersoluciones.flut
 final iosChannel = const MethodChannel('flutter_pos_printer_platform/methods');
 final iosStateChannel = const EventChannel('flutter_pos_printer_platform/state');
 
-enum BTStatus { none, connecting, connected, scanning, stopScanning }
 
 enum USBStatus { none, connecting, connected }
 
