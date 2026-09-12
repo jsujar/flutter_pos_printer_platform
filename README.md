@@ -1,14 +1,117 @@
-# flutter_pos_printer_platform
+# flutter_pos_printer_platform — USB-only fork
 
-[![Pub Version](https://img.shields.io/badge/pub-v1.2.3-green)](https://pub.dev/packages/flutter_pos_printer_platform_image_3)
+> **This is a fork.** It is not a drop-in replacement for the upstream package:
+> **Bluetooth and BLE support has been removed entirely.** Anything that imports
+> `PrinterType.bluetooth`, `BluetoothPrinterInput` or the Bluetooth connectors will
+> not compile against it.
 
-Notice: This library was initially forked from [arthas1888](https://github.com/arthas1888/flutter_pos_printer_platform) in order to use it in a flutter project that use both image v4 and image v3 dart libraries. And since then, the library received many bug fixes after the original library was [discontinued](https://pub.dev/packages/flutter_pos_printer_platform).
+Maintained at [jsujar/flutter_pos_printer_platform](https://github.com/jsujar/flutter_pos_printer_platform),
+forked from [diantahoc/flutter_pos_printer_platform](https://github.com/diantahoc/flutter_pos_printer_platform).
+
+## What this fork changes
+
+### 1. Fixes the USB permission crash on Android 12+ and 13+
+
+Connecting a USB printer crashed the host app on Android 14. One bug with two faces,
+both of them platform requirements the upstream plugin predates:
+
+- The `PendingIntent` used to request USB permission declared neither mutability nor a
+  target package. Since Android 12 it must declare `FLAG_MUTABLE` or `FLAG_IMMUTABLE`,
+  and since Android 14 an implicit intent inside a mutable one must name its package.
+
+  `FLAG_IMMUTABLE` is **not** the fix: the permission dialog has to write `EXTRA_DEVICE`
+  and `EXTRA_PERMISSION_GRANTED` into the reply intent, and an immutable `PendingIntent`
+  never receives them — the receiver would read `getBooleanExtra(EXTRA_PERMISSION_GRANTED,
+  false)` and permission would look denied every single time. The fix is to keep
+  `FLAG_MUTABLE` and make the intent explicit with `setPackage()`.
+
+- `registerReceiver` did not declare export behaviour, mandatory since Android 13.
+
+`compileSdkVersion` moves from 31 to 34 because the code now references
+`Build.VERSION_CODES.TIRAMISU` and `Context.RECEIVER_NOT_EXPORTED`. `targetSdkVersion` is
+deliberately left alone: in a library it does not govern runtime behaviour — the host
+app's `targetSdk` does.
+
+### 2. Removes Bluetooth and BLE support
+
+This is the breaking change, and it was a deliberate trade, not a cleanup. Three reasons,
+in order of weight:
+
+**The permissions.** The upstream manifest declared seven permissions that **every host
+app inherited without asking for them**:
+
+```
+BLUETOOTH · BLUETOOTH_ADMIN · BLUETOOTH_SCAN · BLUETOOTH_ADVERTISE
+BLUETOOTH_CONNECT · ACCESS_FINE_LOCATION · ACCESS_COARSE_LOCATION
+```
+
+Two of those are location permissions. Google Play makes you justify them in the store
+listing, and users see them at install time. A point-of-sale tablet asking for precise
+location because of a *printer* plugin is indefensible, and no amount of explaining makes
+it look better.
+
+**A whole class of crash disappears with it.** The `bluetoothService` field was `lateinit`
+and assigned in `onAttachedToActivity()` *after* `adapter.init()`. When that init threw —
+and on Android 14 it always did, see reason 1 — the field stayed unassigned and the app
+crashed on teardown with `UninitializedPropertyAccessException`. The visible symptom was a
+crash on closing the app, which is about as far from the real cause as a stack trace can
+get. Remove the field and the failure mode cannot happen.
+
+**Dead weight.** The app this fork serves prints over USB and nothing else: there was not a
+single call into the Bluetooth side, while the code kept a BLE scanner and a bonded-device
+receiver alive in the background.
+
+If Bluetooth is ever needed again, recover it from git history rather than rewriting it.
+
+### 3. Adds printer status reading over USB
+
+New `readStatus()` / `readPrinterStatus`, which asks the printer for its state with the
+ESC/POS real-time command `DLE EOT n` over the bulk IN endpoint — the endpoint upstream
+ignored, picking up only the OUT one.
+
+| n | Query |
+|---|---|
+| 1 | Printer status |
+| 2 | Offline status — **includes cover open** |
+| 3 | Error status |
+| 4 | Paper sensor |
+
+Returns four integers, `-1` wherever the printer did not answer.
+
+⚠️ **Four `-1` values are not a bug in this code.** Plenty of cheap printers expose the IN
+endpoint to satisfy the USB spec and then never implement the command. Verified on an
+`H58 Printer USB` (vendor `1110`, product `2056`): writes succeed, the IN endpoint is
+there, and it answers nothing to all four queries. Check your own hardware before building
+anything on top of this.
+
+The reason it exists: a kitchen ticket that never comes out is an order nobody prepares,
+and without status reading there is no way to tell whether the printer ran out of paper or
+its cover is open. Worth knowing before you rely on it: with the cover open, a bulk write
+still **succeeds** — the data sits in the printer's buffer and prints when the cover is
+closed again. The return code tells you nothing about the printer's physical state.
+
+## Installing
+
+```yaml
+dependency_overrides:
+  flutter_pos_printer_platform_image_3:
+    git:
+      url: https://github.com/jsujar/flutter_pos_printer_platform.git
+      ref: fix/android14-usb-permission-and-lifecycle
+```
+
+Pin a commit rather than the branch once you depend on it in earnest, so a build today and
+a build next month give the same thing.
 
 --------------------------
 
+## Upstream documentation
+
 A library to discover printers, and send printer commands.
 
-This library allows to print esc commands to printers in different platforms such as android, ios, windows and different interfaces as Bluetooth and BLE, USB and Wifi/Ethernet
+This library allows to print esc commands to printers in different platforms such as android, ios, windows and different interfaces as USB and Wifi/Ethernet.
+
+> ⚠️ Upstream text below may still mention Bluetooth. **This fork does not support it** — see "What this fork changes" above.
 
 Inspired by [flutter_pos_printer](https://github.com/feedmepos/flutter_printer/tree/master/packages/flutter_pos_printer).
 
