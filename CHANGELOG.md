@@ -7,6 +7,13 @@ Not published to pub.dev. Consume it from git; see the README.
   `RECEIVER_NOT_EXPORTED`. `compileSdkVersion` raised from 31 to 34.
 * **Added** `readStatus()` / `readPrinterStatus`, which queries the printer with the
   ESC/POS real-time command `DLE EOT 1..4` over the bulk IN endpoint.
+* **Fixed** `openConnection()` reporting success when there was none. If the interface
+  exposed no bulk OUT endpoint, the loop fell through to `return true` with
+  `mUsbDeviceConnection` and `mEndPoint` still null: the caller believed it was connected
+  and every later write failed with "USB Device is not initialized", far from the real
+  cause. It now returns `false` and logs why.
+* **Fixed** the "connected device" toast firing before `claimInterface()`, so it announced
+  a connection even when claiming the interface failed immediately afterwards.
 * **BREAKING:** removed Bluetooth and BLE from the public API and from the Android native
   side — `PrinterType.bluetooth`, `BluetoothPrinterInput`, the Bluetooth connectors, the
   `isBle` / `autoConnect` parameters and the `stateBluetooth` stream. Also drops the seven
