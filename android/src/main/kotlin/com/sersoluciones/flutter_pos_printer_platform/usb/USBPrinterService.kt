@@ -186,11 +186,18 @@ class USBPrinterService private constructor(private var mHandler: Handler?) {
                         Log.e(LOG_TAG, "Failed to open USB Connection")
                         return false
                     }
-                    Toast.makeText(mContext, mContext?.getString(R.string.connected_device), Toast.LENGTH_SHORT).show()
                     return if (usbDeviceConnection.claimInterface(usbInterface, true)) {
                         mEndPoint = ep
                         mUsbInterface = usbInterface
                         mUsbDeviceConnection = usbDeviceConnection
+                        // Announced only once the interface is actually
+                        // claimed. It used to fire one line earlier, so the
+                        // toast said "connected" even when claiming failed.
+                        Toast.makeText(
+                            mContext,
+                            mContext?.getString(R.string.connected_device),
+                            Toast.LENGTH_SHORT
+                        ).show()
                         true
                     } else {
                         usbDeviceConnection.close()
@@ -200,7 +207,17 @@ class USBPrinterService private constructor(private var mHandler: Handler?) {
                 }
             }
         }
-        return true
+
+        // No bulk OUT endpoint on this interface: there is nothing to write to.
+        //
+        // This used to `return true`, reporting a successful connection with
+        // mUsbDeviceConnection and mEndPoint both still null. The caller
+        // believed it was connected and every later write failed with
+        // "USB Device is not initialized" -- a failure that surfaces far from
+        // its cause, and looks like a flaky printer rather than a refused
+        // connection.
+        Log.e(LOG_TAG, "No bulk OUT endpoint: this device cannot be printed to")
+        return false
     }
 
     /**
